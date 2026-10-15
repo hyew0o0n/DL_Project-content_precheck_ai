@@ -1,0 +1,10 @@
+   llm:
+     provider: gemini
+     model: ""          # W4에 AI Studio에서 정식 모델 이름 확인 후 입력
+     temperature: 0
+   classifier:
+     threshold: 0.5     # W6에 B가 validation으로 조정
+   paths:
+     checkpoints: /nfs/team/checkpoints
+     vectordb: /nfs/team/vectordb
+     hf_cache: /nfs/team/hf_cache
