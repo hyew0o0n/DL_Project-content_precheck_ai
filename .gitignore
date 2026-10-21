@@ -1,7 +1,8 @@
-   .env
-   .venv/
-   __pycache__/
-   checkpoints/
-   *.safetensors
-   *.bin
-   *.pt
+.env
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+checkpoints/
+*.safetensors
+*.bin
+*.pt
