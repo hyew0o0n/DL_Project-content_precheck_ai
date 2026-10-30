@@ -1,5 +1,13 @@
-transformers
-datasets
 torch
+transformers
+datasets==2.19.2
+accelerate
 scikit-learn
 pandas
+ipykernel
+
+# W4-A 제미나이 API
+google-genai==2.33.0
+python-dotenv
+pyyaml
+pydantic
