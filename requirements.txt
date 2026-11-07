@@ -11,3 +11,5 @@ google-genai==2.33.0
 python-dotenv
 pyyaml
 pydantic
+
+gradio

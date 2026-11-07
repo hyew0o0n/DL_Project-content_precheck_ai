@@ -274,14 +274,16 @@ def search(
 
     Returns:
         list[dict]:
-            v0.2 evidence 형식
+            v0.3 evidence 형식
             {
                 "doc_id": ...,
                 "doc": ...,
                 "clause": ...,
                 "status": ...,
                 "url": ...,
-                "score": ...
+                "score": ...,
+                "excerpt":..., #v0.3 추가 : 조항 원문 해당 부분 (시트 "주요 제재 및 검수 대상 내용")
+                "applies_to":...# v0.3 추가: 적용 대상 리스트 (시트 "적용 대상")
             }
     """
 
@@ -353,6 +355,8 @@ def search(
             "status": metadata["status"],
             "url": metadata["url"],
             "score": round(score, 4),
+            "excerpt": metadata.get("text") or metadata.get("summary", ""),
+            "applies_to": json.loads(metadata.get("applies_to", "[]")),
         })
 
         if len(evidence) >= k:
