@@ -1,0 +1,5 @@
+===== 11/13 15:15 v5 후속 실험 =====
+v6 | KcELECTRA / pos_weight sqrt / race×1 / lr 2e-05 / 3ep(best 3.0) / seed 42 | @0.5 macro 0.7934 micro 0.8758 | 임계값 튜닝 macro 0.7966 micro 0.8842 | race F1 0.3750
+v7 | KcELECTRA / pos_weight sqrt / race×1 / lr 2e-05 / 8ep(best 6.0) / seed 42 | @0.5 macro 0.8071 micro 0.8820 | 임계값 튜닝 macro 0.8120 micro 0.8837 | race F1 0.5091
+v5_s7 | KcELECTRA / pos_weight sqrt / race×1 / lr 2e-05 / 5ep(best 5.0) / seed 7 | @0.5 macro 0.8010 micro 0.8791 | 임계값 튜닝 macro 0.8079 micro 0.8863 | race F1 0.4364
+v5_s123 | KcELECTRA / pos_weight sqrt / race×1 / lr 2e-05 / 5ep(best 4.0) / seed 123 | @0.5 macro 0.8074 micro 0.8772 | 임계값 튜닝 macro 0.8138 micro 0.8837 | race F1 0.5172

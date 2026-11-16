@@ -19,12 +19,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from data.kmhas import LABEL_KO, LABEL_MAP, LABEL_NAMES
 
 ROOT = Path(__file__).resolve().parent.parent           # ~/project
-CKPT_DIR = ROOT / "checkpoints" / "v3" / "final"        # 새 버전을 쓰려면 여기만 바꿈
-DEFAULT_THRESHOLD = 0.5                                 # train_config.json에 있으면 그 값 사용(동일함)
+CKPT_DIR = ROOT / "checkpoints" / "v5" / "final"        # 새 버전을 쓰려면 여기만 바꿈
+DEFAULT_REVIEW_THRESHOLD = 0.4                          # W6 validation 실험으로 선택
+DEFAULT_VIOLATION_THRESHOLD = 0.8                       # W6 validation 실험으로 선택
+DEFAULT_THRESHOLD = DEFAULT_REVIEW_THRESHOLD             # 기존 import와의 호환용
 DEFAULT_MAX_LENGTH = 64                                 # W3 토큰 길이 95% 지점 37 → 64
 
 POLITICAL_QUESTION = "정치적으로 해석될 수 있는 표현이 있습니다."
-VERDICT = {"hate": "위반", "profanity": "위반", "political": "검토 필요"}
+HARMFUL_REVIEW_QUESTION = "혐오·욕설 표현일 가능성이 있어 사람의 확인이 필요합니다."
 SUBTYPE_LABEL = {"profanity": "욕설·비속어", "political": "정치적 표현"}
 
 _model = _tok = _cfg = None
@@ -72,9 +74,8 @@ def _risk(verdict, conf):
     return round(60 + 40 * conf) if verdict == "위반" else round(20 + 40 * conf)
 
 
-def _make_finding(name, conf, s, e, sent):
+def _make_finding(name, conf, s, e, sent, verdict):
     category, subtype, target = LABEL_MAP[name]
-    verdict = VERDICT[subtype]
     if subtype == "hate":
         label = f"혐오 표현 (대상: {LABEL_KO[LABEL_NAMES.index(name)]})"
     else:
@@ -92,17 +93,42 @@ def _make_finding(name, conf, s, e, sent):
         "location": {"modality": "text", "span": [s, e], "text": sent},
         "evidence": [],
         "message": "",
-        "review_question": POLITICAL_QUESTION if verdict == "검토 필요" else None,
+        "review_question": (
+            POLITICAL_QUESTION
+            if subtype == "political"
+            else HARMFUL_REVIEW_QUESTION
+            if verdict == "검토 필요"
+            else None
+        ),
         "suggestion": None,
     })
     return f
 
 
 @torch.no_grad()
-def predict(text, threshold=None):
+def predict(text, threshold=None, review_threshold=None, violation_threshold=None):
     model, tok, cfg = _load()
-    if threshold is None:
-        threshold = float(_cfg_get(cfg, "threshold", DEFAULT_THRESHOLD))
+
+    # threshold를 명시한 기존 호출은 예전 단일 임계값 방식과 호환한다.
+    if threshold is not None:
+        review_threshold = float(threshold)
+        violation_threshold = float(threshold)
+    else:
+        if review_threshold is None:
+            review_threshold = float(
+                _cfg_get(cfg, "review_threshold", DEFAULT_REVIEW_THRESHOLD)
+            )
+        if violation_threshold is None:
+            violation_threshold = float(
+                _cfg_get(cfg, "violation_threshold", DEFAULT_VIOLATION_THRESHOLD)
+            )
+
+    if not (0.0 <= review_threshold <= violation_threshold <= 1.0):
+        raise ValueError(
+            "threshold는 0~1 범위에서 review_threshold <= "
+            "violation_threshold여야 합니다."
+        )
+
     max_len = int(_cfg_get(cfg, "max_length", DEFAULT_MAX_LENGTH))
 
     spans = split_sentences(text)
@@ -117,9 +143,30 @@ def predict(text, threshold=None):
     findings = []
     for (s, e), sent, p in zip(spans, sents, probs):
         for i, name in enumerate(LABEL_NAMES):
-            if LABEL_MAP[name] is None or p[i] < threshold:   # not_hate는 만들지 않음
+            # not_hate는 finding을 만들지 않음
+            if LABEL_MAP[name] is None:
                 continue
-            findings.append(_make_finding(name, p[i], s, e, sent))
+
+            conf = p[i]
+
+            # review threshold 미만은 통과 → finding 없음
+            if conf < review_threshold:
+                continue
+
+            _, subtype, _ = LABEL_MAP[name]
+
+            # 정치 표현은 확률이 높아도 자동 위반으로 단정하지 않음
+            if subtype == "political":
+                verdict = "검토 필요"
+            # 혐오·욕설은 두 경계값으로 3단계 판정
+            elif conf >= violation_threshold:
+                verdict = "위반"
+            else:
+                verdict = "검토 필요"
+
+            findings.append(
+                _make_finding(name, conf, s, e, sent, verdict)
+            )
 
     for n, f in enumerate(findings, 1):
         f["id"] = f"f{n}"

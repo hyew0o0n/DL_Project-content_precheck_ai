@@ -1,0 +1,31 @@
+﻿no,error_type,label,label_ko,prob,true_labels,pred_labels,text
+1,미탐(FN),origin,출신,0.0029,origin,-,윤여정선생님은 이번회가 마지막으로 하자. 투덜대는거 안좋아요 너무 곱게자라신가같아
+2,미탐(FN),physical,외모,0.0004,physical,origin,"""구캐의원들 줄이자는데 웬 뚱딴지 같은"""
+3,미탐(FN),politics,정치,0.0010,politics,-,트퀴벌레들 남에 가수기사에와서 시샘질이야 ㅋ
+4,미탐(FN),profanity,욕설,0.0013,"origin, profanity",-,더러운 나라 한국에 어서오세요
+5,미탐(FN),age,연령,0.0039,"physical, age",physical,"""면상봐라 저게 어디 봉사할 상이냐?"""
+6,미탐(FN),gender,성별,0.0015,gender,profanity,저런놈 완전퇴출시켜야하는데
+7,미탐(FN),race,인종,0.0029,race,-,흑형이 아니라 튀기다. 말은 바로 하자.튀기가 뭐 어때서 인순이도 튀긴데... 중요한건 돈을 잘버느냐 못버느냐지 편건이 아니다. 이 세상은 돈으로 사는거야. 돈 많이 벌어 잘먹고 잘살면 장땡
+8,미탐(FN),religion,종교,0.0031,religion,-,주여!!!!!! 주여!!!!!!! 주여만 외치면 다 되는거임. 세상 편한 직업. 주여!!!!!
+9,미탐(FN),origin,출신,0.0056,origin,-,박보검 명지대 자연캠이면 공부 개못했네 ㅋㅋㅋㅋㅋㅋ
+10,미탐(FN),physical,외모,0.0011,physical,-,이그룹이 트와이스에 기생 빌붙어서 원탑 흉내내는 그룹인가요?
+11,미탐(FN),politics,정치,0.0014,politics,"physical, profanity","""꼴값떠네 핵똥손들 다 니들 때문에 물가 죄다 오른다 훽똥손들"""
+12,미탐(FN),profanity,욕설,0.0026,profanity,-,관리를 쫌 해야할듯중년신사같네..
+13,미탐(FN),age,연령,0.0054,age,-,"""하는짓이 어쩜 초딩 이나 할짓을 에휴 공지영 정신수준 알만하다"""
+14,미탐(FN),gender,성별,0.0027,"politics, profanity, gender",-,"""ㄴ히가 단세포? 저나라와 우라나라 단순비교는 좀, 노령인구를 따져야 할듯"""
+15,미탐(FN),race,인종,0.0216,"politics, profanity, race",politics,"""대깨문 조빠 개,돼지야 왜사니?"""
+16,오탐(FP),origin,출신,0.9984,not_hate,origin,"전라도 여자들이 싹싹하던데 , 수지가 전라도 출신이라서 김동욱한테 무척 잘해줄듯, 경상도 여자들은 드세고 억세고 기가세고 , 충청도 여자는 음흉한게 있고 ,"
+17,오탐(FP),physical,외모,0.9987,not_hate,physical,강남 스엉괴와 존못남의 사랑드라마?
+18,오탐(FP),politics,정치,0.9986,origin,politics,북조선 티비에 가서 북한을 찬양하겠구나. OOO들
+19,오탐(FP),profanity,욕설,0.9990,not_hate,profanity,존나징그럽네..
+20,오탐(FP),age,연령,0.9987,profanity,"politics, profanity, age, race","""40대 듷쉰들이 좌경화되서 정신못차리고 연금날려먹고 한푼도 못받고 잘하는 짓이다"""
+21,오탐(FP),gender,성별,0.9958,origin,"origin, gender",다니엘헤니(메갈남신): 한녀는 얼굴만봐도 토할거같다
+22,오탐(FP),race,인종,0.9961,not_hate,"origin, physical, politics, age, gender, race, religion","""팩트 : 흑인도 아시아인 개무시함"""
+23,오탐(FP),religion,종교,0.9992,not_hate,"politics, religion","""공산당 신천지 이슬람 거짓말이 일상화됨 피해주고 피해받았다"""
+24,오탐(FP),origin,출신,0.9977,profanity,origin,"""띨띨한 넘 너 조선족이지 ㆍ 꺼져"""
+25,오탐(FP),physical,외모,0.9975,profanity,"physical, profanity",노점 할머니가 ~네래 / 극혐 똥리뽀리 윤아 누가 더 못생겨 허위언플 선동하네 듣보 구린 짝퉁년이 조기영구종영 불매퇴출추방
+26,오탐(FP),politics,정치,0.9985,not_hate,politics,평소에 sns로 입잘털던 좌파연예인들은 6월되면 조용하더라
+27,오탐(FP),profanity,욕설,0.9988,not_hate,profanity,ㅅㅂㅋㅋㅋㅋㅋ다른그룹 하나만걸려밬ㅋㅋㅋㅋ똑같이해줄게 머라나올지 존나궁금하넼ㅋㅋㅋㅋㅋㅋ
+28,오탐(FP),age,연령,0.9983,not_hate,age,"""3040이 가장 반일에 선동된 세대아님?ㅋㅋ"""
+29,오탐(FP),gender,성별,0.9953,not_hate,gender,남자가 남자를 보고 성충동을 느낀다. 우웩!
+30,오탐(FP),race,인종,0.9955,not_hate,"origin, physical, politics, age, gender, race, religion",백인종 황인종 흑인종 그리고 관x
