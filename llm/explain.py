@@ -75,7 +75,7 @@ def _risk(verdict: str, conf: float) -> int:
 def _query_of(finding: dict) -> str:
     """검색 질문 = 항목 이름 + 걸린 표현."""
     loc = finding.get("location", {})
-    snippet = loc.get("text") or loc.get("ocr_text") or ""
+    snippet = loc.get("text") or loc.get("ocr_text") or loc.get("description") or ""   # [W7] VLM은 description
     return f"{finding['label']}: {snippet}"[:300]
 
 
@@ -96,7 +96,7 @@ def retrieve(finding: dict, ad_detected: bool = False, k: int = K) -> list[dict]
     return search(
         _query_of(finding),
         k=k,
-        violation_types=[finding["subtype"]],
+        violation_types=finding.get("search_types") or [finding["subtype"]],   # [W7] 얼굴: ai_virtual_human + portrait
         purpose=p,
     )
 
@@ -110,7 +110,7 @@ PROMPT = """너는 광고·SNS 콘텐츠 사전 검수 도우미야. 사람 검�
 - 유형: {label}  (코드: {category}.{subtype})
 - 판정: {verdict}
 - 문제 구간: "{span_text}"
-- 탐지한 단계: {source}  (rule=규칙, classifier=분류 모델)
+- 탐지한 단계: {source}  (rule=규칙, classifier=분류 모델, vlm=이미지 판단 모델, face=얼굴 검출)
 
 [근거 후보 조항] (검색 결과, 이 목록 밖의 법령·정책은 절대 쓰지 말 것)
 {candidates}
@@ -151,7 +151,7 @@ def build_prompt(text: str, finding: dict, cands: list[dict]) -> str:
         category=finding["category"],
         subtype=finding["subtype"],
         verdict=finding["verdict"],
-        span_text=loc.get("text") or loc.get("ocr_text") or "",
+        span_text=loc.get("text") or loc.get("ocr_text") or loc.get("description") or "",
         source=finding.get("source", ""),
         candidates=_format_candidates(cands),
     )

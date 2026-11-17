@@ -6,8 +6,11 @@ beFore · AI 콘텐츠 사전 검수 데모 UI
 - 실행: python app.py → VS Code "포트" 탭 7860 → 노트북 브라우저 localhost:7860
 - share=True 금지 (학과 정책). 다 쓰면 Ctrl+C로 종료.
 """
+import base64
 import html
+import io
 import json
+from datetime import date
 from pathlib import Path
 
 import gradio as gr
@@ -18,6 +21,8 @@ import pipeline
 RUN = getattr(pipeline, "run", None) or getattr(pipeline, "analyze", None)
 if RUN is None:
     raise ImportError("pipeline.py에서 run(text, purpose) 함수를 찾지 못했어요. app.py의 RUN을 맞춰주세요.")
+RUN_FILE = getattr(pipeline, "run_file", None)   # [W7] 이미지: fn(path, purpose, input_id, post_date) -> dict
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 # ---------------------------------------------------------------
 # 디자인 토큰
@@ -54,17 +59,17 @@ footer {{ display:none !important; }}
 #hdr .avatar {{ width:34px; height:34px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; }}
 
 /* 화면 1 */
-#hero {{ text-align:center; padding:36px 0 24px; }}
+#hero {{ text-align:center; padding:20px 0 18px; }}
 #hero .eyebrow {{ display:inline-block; font-size:13px; font-weight:600; color:#4d5a00; background:var(--brand); padding:5px 12px; border-radius:999px; margin-bottom:14px; }}
 #hero h1 {{ font-size:32px; font-weight:700; letter-spacing:-0.8px; line-height:1.4; margin:0; color:var(--ink); }}
-#hero p {{ font-size:16px; color:var(--sub); margin:14px 0 0; }}
+#hero p {{ font-size:16px; color:var(--sub); margin:10px 0 0; }}
 #hero p b {{ color:var(--ink); font-weight:600; background:linear-gradient(transparent 60%, var(--brand) 60%); }}
 
 #upload-card {{ max-width:880px; margin:0 auto !important; border:1.5px solid var(--ink) !important; border-radius:18px !important;
                background:#fff !important; padding:0 !important; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,0.05); gap:0 !important; }}
 #upload-card > * {{ border:none !important; box-shadow:none !important; background:transparent !important; }}
 #in-text textarea {{ border:none !important; box-shadow:none !important; font-size:17px !important; line-height:1.7 !important;
-                     padding:22px 32px 6px !important; resize:none; background:transparent !important; }}
+                     padding:18px 32px 4px !important; resize:none; background:transparent !important; }}
 #in-text textarea::placeholder {{ color:#9a9a9a; }}
 #purpose-hint {{ padding:4px 20px 0; font-size:14px; color:var(--sub); }}
 #purpose-hint b {{ color:var(--ink); font-weight:600; margin-right:6px; }}
@@ -138,6 +143,26 @@ footer {{ display:none !important; }}
 .ev-meta a {{ margin-left:auto; color:var(--ink); font-weight:600; text-decoration:none; }}
 .ev-meta a:hover {{ text-decoration:underline; }}
 .empty {{ padding:40px 0; font-size:17px; }}
+
+/* [W7] 이미지 결과 · 특별한 날 · 게시 예정일 */
+.img-wrap {{ position:relative; width:100%; line-height:0; border-radius:10px; overflow:hidden; }}
+.img-wrap img {{ width:100%; height:auto; display:block; }}
+.img-box {{ position:absolute; border:2px solid; border-radius:3px; box-sizing:border-box; }}
+.img-box span {{ position:absolute; top:-2px; left:-2px; color:#fff; font-size:11px; font-weight:700; line-height:1; padding:3px 5px; border-radius:3px 0 3px 0; }}
+.img-whole {{ margin-top:12px; font-size:13px; color:var(--sub); line-height:1.6; }}
+.ocr-lines {{ margin-top:14px; font-size:13px; color:var(--sub); line-height:1.7; white-space:pre-wrap; }}
+.ocr-lines b {{ display:block; color:var(--ink); font-size:13px; margin-bottom:2px; }}
+.f-no {{ display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; border-radius:6px; font-size:12px; font-weight:700; color:#fff; }}
+.day-banner {{ display:flex; gap:10px; align-items:flex-start; padding:14px 18px; margin-bottom:18px; border-radius:12px; background:var(--brand); font-size:15px; line-height:1.6; }}
+#date-row {{ padding:0 32px 14px 20px !important; }}
+#date-pick {{ display:flex; align-items:center; gap:10px; font-size:14px; color:var(--sub); white-space:nowrap; }}
+#date-pick > b {{ color:var(--ink); font-weight:600; }}
+#date-pick .date-anchor {{ position:relative; display:inline-block; }}
+#date-pick .date-btn {{ border:1.2px solid var(--ink); border-radius:999px; background:#fff; padding:5px 14px; font-size:13px; font-weight:600; cursor:pointer; }}
+#date-pick .date-btn:hover {{ background:var(--brand); }}
+#date-pick input[type=date] {{ position:absolute; left:0; top:100%; width:1px; height:1px; opacity:0; border:0; padding:0; pointer-events:none; }}
+#date-pick .date-btn.picked {{ background:var(--brand); }}
+.hidden-box {{ display:none !important; }}
 
 /* 분석 중 */
 #loading {{ text-align:center; padding:96px 0 120px; }}
@@ -219,7 +244,47 @@ def highlighted(text, findings):
     return "".join(out)
 
 
-def left_panel(text, purpose, res):
+def _thumb_b64(path, max_w=900):
+    """결과 화면용으로 줄인 이미지 → data URI (원본 좌표는 퍼센트로 맞추므로 크기가 달라도 됨)."""
+    from PIL import Image
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        if im.width > max_w:
+            im = im.resize((max_w, round(im.height * max_w / im.width)))
+        buf = io.BytesIO()
+        im.save(buf, format="JPEG", quality=85)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def image_view(img_path, res):
+    """[W7] 이미지 + 문제 상자(bbox). 위반 빨강 / 검토 필요 주황, 30% 투명. 번호 = 오른쪽 카드 번호."""
+    inp = res.get("input", {})
+    W, H = inp.get("width") or 1, inp.get("height") or 1
+    by_box, whole = {}, []   # 같은 상자(같은 OCR 줄)에 걸린 finding은 상자 하나로 묶음 → 번호 "2·3·4"
+    for f in res.get("findings", []):
+        loc = f.get("location") or {}
+        v, no = f["verdict"], f.get("id", "").lstrip("f")
+        bbs = loc.get("bboxes") or ([loc["bbox"]] if loc.get("bbox") else [])
+        if not bbs:
+            whole.append(f'<span style="color:{COLORS.get(v)};font-weight:700">{esc(no)}</span> {esc(f.get("label", ""))}')
+        for bb in bbs:
+            nos, worst = by_box.get(tuple(bb), ([], v))
+            by_box[tuple(bb)] = (nos + [no], v if SEVERITY.get(v, 0) > SEVERITY.get(worst, 0) else worst)
+    boxes = []
+    for (x1, y1, x2, y2), (nos, v) in by_box.items():
+        style = (f"left:{100*x1/W:.2f}%;top:{100*y1/H:.2f}%;width:{100*(x2-x1)/W:.2f}%;height:{100*(y2-y1)/H:.2f}%;"
+                 f"border-color:{COLORS.get(v)};background:{HL.get(v, 'transparent')}")
+        boxes.append(f'<div class="img-box" style="{style}"><span style="background:{COLORS.get(v)}">{esc("·".join(nos))}</span></div>')
+    out = f'<div class="img-wrap"><img src="{_thumb_b64(img_path)}">{"".join(boxes)}</div>'
+    if whole:
+        out += f'<div class="img-whole">이미지 전체 관련 · {" · ".join(whole)}</div>'
+    ocr_text = (res.get("meta") or {}).get("ocr_text", "")
+    if ocr_text:
+        out += f'<div class="ocr-lines"><b>이미지에서 읽은 글자</b>{esc(ocr_text)}</div>'
+    return out
+
+
+def left_panel(text, purpose, res, img_path=None):
     v = res.get("verdict", "통과")
     chips = "".join(f'<span class="chip{" on" if val == purpose else ""}">{esc(lbl)}</span>' for lbl, val in PURPOSES[:-1])
     if purpose == "none":
@@ -234,7 +299,7 @@ def left_panel(text, purpose, res):
     <div class="overall">{badge(v)}<span class="sum">{esc(res.get("summary", ""))}</span>
       <span class="score"><small>위험도</small><b style="color:{COLORS.get(v)}">{res.get("risk_score", 0)}</b></span></div>
     <div class="src-card">
-      <div class="src-text">{highlighted(text, res.get("findings", []))}</div>
+      {image_view(img_path, res) if img_path else f'<div class="src-text">{highlighted(text, res.get("findings", []))}</div>'}
       <div class="legend"><span><i style="background:{HL['위반']}"></i>위반</span><span><i style="background:{HL['검토 필요']}"></i>검토 필요</span></div>
       <div class="p-title">콘텐츠 게시 목적</div>
       <div class="chips">{chips}</div>
@@ -266,11 +331,15 @@ def evidence_html(e):
 def finding_html(f):
     v = f["verdict"]
     loc = f.get("location") or {}
-    quote = loc.get("text") or loc.get("ocr_text")
-    parts = [f'<div class="finding"><div class="f-top">{badge(v)}<span class="f-label">{esc(f.get("label", ""))}</span>'
+    quote = loc.get("text") or loc.get("ocr_text") or loc.get("description")
+    is_img = loc.get("modality") == "image"
+    no = f'<span class="f-no" style="background:{COLORS.get(v)}">{esc(f.get("id", "").lstrip("f"))}</span>' if is_img else ""
+    parts = [f'<div class="finding"><div class="f-top">{no}{badge(v)}<span class="f-label">{esc(f.get("label", ""))}</span>'
              f'<span class="f-risk" style="color:{COLORS.get(v)}">위험도<b style="color:{COLORS.get(v)}">{f.get("risk", 0)}</b></span></div>']
     if quote:
-        parts.append(f'<div class="f-quote">해당 표현 <span style="background:{HL.get(v)}">{esc(quote)}</span></div>')
+        parts.append(f'<div class="f-quote">{"해당 부분" if is_img else "해당 표현"} <span style="background:{HL.get(v)}">{esc(quote)}</span></div>')
+        if is_img and loc.get("ocr_text") and loc.get("ocr_text") != quote:
+            parts.append(f'<div class="f-quote">이미지 속 문구 · {esc(loc["ocr_text"])}</div>')
     if f.get("message"):
         parts.append(f'<div class="f-msg">{esc(f["message"])}</div>')
     if f.get("review_question"):
@@ -278,47 +347,106 @@ def finding_html(f):
     if f.get("suggestion"):
         parts.append(f'<div class="f-sug">✏️ 이렇게 바꿔보세요 · {esc(f["suggestion"])}</div>')
     ev = f.get("evidence") or []
-    parts.append('<div class="ev-title">근거 조항</div>')
-    parts.append("".join(evidence_html(e) for e in ev) if ev else '<div class="f-quote">연결된 조항을 찾지 못했어요.</div>')
+    if f.get("source") != "vlm":   # [W7] VLM(상징·로고)은 근거 조항 없이 안내만
+        parts.append('<div class="ev-title">근거 조항</div>')
+        parts.append("".join(evidence_html(e) for e in ev) if ev else '<div class="f-quote">연결된 조항을 찾지 못했어요.</div>')
     parts.append("</div>")
     return "".join(parts)
+
+
+def day_banner(res):
+    """[W7] 특별한 날이면 결과 화면 맨 위 배너 (utils/dates.py가 만든 message 그대로)."""
+    sd = res.get("special_day")
+    return f'<div class="day-banner"><span>📅</span><span>{esc(sd["message"])}</span></div>' if sd and sd.get("message") else ""
 
 
 def right_panel(res):
     fs = res.get("findings", [])
     if not fs:
-        return (f'<div class="empty">{badge("통과")}<p style="margin-top:16px">발견된 문제가 없어요. 그대로 게시해도 좋아요.</p></div>')
+        return (day_banner(res) + f'<div class="empty">{badge("통과")}<p style="margin-top:16px">발견된 문제가 없어요. 그대로 게시해도 좋아요.</p></div>')
     n_v = sum(f["verdict"] == "위반" for f in fs)
     n_r = sum(f["verdict"] == "검토 필요" for f in fs)
     head = f'<div class="f-head">발견 항목 <b>{len(fs)}건</b> · 위반 {n_v} · 검토 필요 {n_r}</div>'
-    return head + "".join(finding_html(f) for f in fs)
+    return day_banner(res) + head + "".join(finding_html(f) for f in fs)
 
 
 # ---------------------------------------------------------------
 # 이벤트
 # ---------------------------------------------------------------
 def on_file(file):
-    """.txt면 글자를 입력창에 채움. 이미지·영상은 W7 연결 전까지 안내만."""
+    """.txt면 글자를 입력창에 채움. [W7] 이미지는 경로를 기억해 두고 이미지 검수로 보냄. 영상은 W8."""
     if file is None:
-        return gr.update(), ""
+        return gr.update(), "", None
     p = Path(file if isinstance(file, str) else file.name)
-    if p.suffix.lower() == ".txt":
-        return p.read_text(encoding="utf-8", errors="ignore"), f'<span class="ok">📎 {esc(p.name)}</span>'
-    return gr.update(), f'📎 {esc(p.name)} · 이미지·영상 검수는 곧 지원돼요'
+    ext = p.suffix.lower()
+    if ext == ".txt":
+        return p.read_text(encoding="utf-8", errors="ignore"), f'<span class="ok">📎 {esc(p.name)}</span>', None
+    if ext in IMAGE_EXT and RUN_FILE is not None:
+        return gr.update(), f'<span class="ok">🖼️ {esc(p.name)} · 이미지를 검수해요</span>', str(p)
+    return gr.update(), f'📎 {esc(p.name)} · 영상 검수는 곧 지원돼요', None
 
 
-def on_start(text):
-    """글이 있으면 '분석 중' 화면으로 전환. 비어 있으면 에러 → 다음 단계 실행 안 됨."""
-    if not (text or "").strip():
-        raise gr.Error("검수할 글을 입력해주세요.")
+def on_start(text, img_path):
+    """글이나 이미지가 있으면 '분석 중' 화면으로 전환. 둘 다 없으면 에러 → 다음 단계 실행 안 됨."""
+    if not (text or "").strip() and not img_path:
+        raise gr.Error("검수할 글을 입력하거나 이미지를 올려주세요.")
     return gr.Column(visible=False), gr.Column(visible=True)
 
 
-def on_submit(text, purpose):
-    text = text.strip()
+# [W7] 게시 예정일: "선택하기" → 브라우저 기본 달력(작은 팝업). 고른 날짜는 숨긴 Textbox(#in-date)로 전달
+DATE_JS = """
+<script>
+(() => {
+  const fmt = v => { const [y, m, d] = v.split('-').map(Number); return `${y}년 ${m}월 ${d}일`; };
+  const today = () => { const t = new Date(); t.setMinutes(t.getMinutes() - t.getTimezoneOffset()); return t.toISOString().slice(0, 10); };
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#date-pick .date-btn')) return;
+    const inp = document.getElementById('date-native');
+    if (!inp) return;
+    try { inp.showPicker(); } catch (_) { inp.style.pointerEvents = 'auto'; inp.focus(); inp.click(); }
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id !== 'date-native' || !e.target.value) return;
+    const v = e.target.value;
+    const btn = document.querySelector('#date-pick .date-btn');
+    btn.textContent = fmt(v) + (v === today() ? ' (오늘)' : '');   // 고른 날짜는 버튼 글자로 보여줌
+    btn.classList.add('picked');
+    const box = document.querySelector('#in-date textarea, #in-date input');
+    if (box) { box.value = v; box.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+})();
+</script>
+"""
+
+
+def date_picker_html(value=None):
+    """게시 예정일 · 안내 · [선택하기] 가로 한 줄. 안 고르면 오늘 기준. 고르면 버튼 글자가 날짜로 바뀜."""
+    v = value or date.today().isoformat()
+    return ('<div id="date-pick"><b>게시 예정일</b>'
+            '<span>특별한 날·시행 예정 규정을 이 날짜 기준으로 확인해요</span>'
+            '<span class="date-anchor"><button type="button" class="date-btn">선택하기</button>'
+            f'<input type="date" id="date-native" value="{v}"></span></div>')
+
+
+def _post_date(value):
+    """날짜 입력 → 'YYYY-MM-DD' 또는 None (DateTime·Textbox 둘 다 대응)."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        from datetime import datetime
+        return datetime.fromtimestamp(value).date().isoformat()
+    return str(value).strip()[:10] or None
+
+
+def on_submit(text, purpose, img_path=None, post_date=None):
+    text = (text or "").strip()
     purpose = purpose or "none"
+    post_date = _post_date(post_date)
     try:
-        res = RUN(text, purpose)
+        if img_path:
+            res = RUN_FILE(img_path, purpose, None, post_date)
+        else:
+            res = RUN(text, purpose, post_date=post_date)
         if isinstance(res, str):
             res = json.loads(res)
     except Exception as e:  # 분석 실패 → 업로드 화면으로 되돌림
@@ -327,19 +455,20 @@ def on_submit(text, purpose):
         return (gr.Column(visible=True), gr.Column(visible=False), gr.Row(visible=False),
                 gr.update(), gr.update(), gr.update())
     return (gr.Column(visible=False), gr.Column(visible=False), gr.Row(visible=True),
-            left_panel(text, purpose, res), right_panel(res), res)
+            left_panel(text, purpose, res, img_path), right_panel(res), res)
 
 
 def on_back():
-    return gr.Column(visible=True), gr.Row(visible=False)
+    """다른 콘텐츠 검수: 올린 이미지도 비움."""
+    return gr.Column(visible=True), gr.Row(visible=False), None, '<span id="file-note">txt · jpg · png · mp4(1분 이하)</span>'
 
 
 # ---------------------------------------------------------------
 # 레이아웃
 # ---------------------------------------------------------------
 _major = int(gr.__version__.split(".")[0])
-_blocks_kw = {} if _major >= 6 else {"css": CSS}
-_launch_kw = {"css": CSS} if _major >= 6 else {}
+_blocks_kw = {} if _major >= 6 else {"css": CSS, "head": DATE_JS}
+_launch_kw = {"css": CSS, "head": DATE_JS} if _major >= 6 else {}
 
 with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
     gr.HTML(HEADER, elem_id="hdr-wrap")
@@ -348,10 +477,14 @@ with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
     with gr.Column(visible=True) as screen1:
         gr.HTML(HERO)
         with gr.Column(elem_id="upload-card"):
-            in_text = gr.Textbox(show_label=False, lines=4, max_lines=12, elem_id="in-text", container=False,
+            in_text = gr.Textbox(show_label=False, lines=2, max_lines=12, elem_id="in-text", container=False,
                                  placeholder="검수할 글을 붙여넣거나, 아래에서 파일을 올려주세요.")
             gr.HTML('<div id="purpose-hint"><b>게시 목적</b>선택하면 목적에 맞는 정책만 골라 근거로 연결해요 (선택)</div>')
             in_purpose = gr.Radio(PURPOSES[:-1], value=None, show_label=False, elem_id="in-purpose", container=False)
+            with gr.Column(elem_id="date-row"):   # [W7] 게시 예정일 (기본값 오늘, "선택하기" → 달력 팝업)
+                date_html = gr.HTML(date_picker_html())
+                in_date = gr.Textbox(value=date.today().isoformat(), elem_id="in-date",
+                                     elem_classes="hidden-box", show_label=False, container=False)
             with gr.Row(elem_id="card-foot", equal_height=True):
                 btn_file = gr.UploadButton("+ 파일 추가", file_types=[".txt", ".jpg", ".jpeg", ".png", ".mp4"],
                                            elem_id="btn-file", size="sm")
@@ -373,12 +506,14 @@ with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
         with gr.Column(scale=7):
             out_right = gr.HTML()
 
-    btn_file.upload(on_file, btn_file, [in_text, file_note])
-    (btn_go.click(on_start, in_text, [screen1, screen_loading], show_progress="hidden")
-           .success(on_submit, [in_text, in_purpose],
+    img_state = gr.State(None)   # [W7] 올린 이미지 경로
+
+    btn_file.upload(on_file, btn_file, [in_text, file_note, img_state])
+    (btn_go.click(on_start, [in_text, img_state], [screen1, screen_loading], show_progress="hidden")
+           .success(on_submit, [in_text, in_purpose, img_state, in_date],
                     [screen1, screen_loading, screen2, out_left, out_right, out_json],
                     show_progress="hidden"))
-    btn_back.click(on_back, None, [screen1, screen2])
+    btn_back.click(on_back, None, [screen1, screen2, img_state, file_note])
 
 
 if __name__ == "__main__":

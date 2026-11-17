@@ -1,6 +1,9 @@
 import json
 import os
 from pathlib import Path
+from datetime import date
+
+from utils.dates import get_reference_date
 
 import chromadb
 import torch
@@ -245,11 +248,32 @@ def _match_purpose(metadata, purpose):
 # 검색
 # --------------------------------------------------
 
+
+def _status_for_date(metadata: dict, reference_date: date) -> str:
+    """기준 날짜에 따라 검색 결과의 정책 상태만 계산한다."""
+    status = metadata.get("status", "")
+
+    if status != "예정":
+        return status
+
+    effective_date = metadata.get("effective_date")
+    if not effective_date:
+        return status
+
+    try:
+        start_date = date.fromisoformat(str(effective_date).strip())
+    except ValueError:
+        return status
+
+    return "시행" if reference_date >= start_date else status
+
+
 def search(
     query,
     k=3,
     violation_types=None,
     purpose=None,
+    ref_date=None,
 ):
     """
     정책 KB 검색.
@@ -294,6 +318,11 @@ def search(
 
     if k <= 0:
         return []
+
+    reference_date = (
+        ref_date if isinstance(ref_date, date)
+        else get_reference_date(ref_date)
+    )
 
     if not _index_ready:
         build_index()
@@ -352,7 +381,7 @@ def search(
             "doc_id": metadata["doc_id"],
             "doc": metadata["doc_name"],
             "clause": metadata["clause"],
-            "status": metadata["status"],
+            "status": _status_for_date(metadata, reference_date),
             "url": metadata["url"],
             "score": round(score, 4),
             "excerpt": metadata.get("text") or metadata.get("summary", ""),
