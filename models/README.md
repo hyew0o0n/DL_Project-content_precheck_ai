@@ -105,6 +105,20 @@ predict("문장1. 문장2")            # 문제 없으면 []
 | --- | --- | --- |
 | v0 | 1,000건 샘플, 1 epoch | 0.0793 |
 | v1 | 전체 데이터, 3 epoch | 0.7527 |
+| v2 | KLUE-RoBERTa | 0.7257 |
+| v3 | KcELECTRA + class weight (비율 그대로) | 0.7530 |
+| v4 | KLUE-RoBERTa + class weight | 0.7254 |
+| **v5** ⭐ | KcELECTRA + **제곱근** class weight, 5 epoch → **현재 사용** | **0.8066** |
+| v6 / v7 | 제곱근 weight, 3 / 8 epoch | 0.7934 / 0.8071 |
+
+자세한 비교는 `results/b_model_compare.md`. v7은 v5와 차이가 없어 더 단순한 v5를 채택.
+
+### 지금 쓰는 판정 기준 (`predict.py`)
+
+- 체크포인트: `checkpoints/v5/final`
+- 혐오·욕설: 확률 0.4 미만 → finding 없음 / 0.4–0.8 → 검토 필요 / 0.8 이상 → 위반
+- 정치: 0.4 이상 → 검토 필요 (위반으로 올리지 않음)
+- 근거: `results/b_threshold.md` (validation 그리드 탐색)
 
 ## 규칙
 
