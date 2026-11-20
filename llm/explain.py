@@ -253,7 +253,8 @@ def explain_finding(text: str, finding: dict, ad_detected: bool = False, ref_dat
         f["explain_status"] = "no_candidates"
 
     # 규칙·VLM은 미리 정한 문장 유지 (VLM ip는 [W8]부터 근거 조항만 LLM이 고름)
-    keep = KEEP_RULE_MESSAGE and f.get("source") in ("rule", "vlm") and f.get("message")
+    # [final] 얼굴(face)도 미리 정한 문장 유지 → LLM은 근거 조항만 고름
+    keep = KEEP_RULE_MESSAGE and f.get("source") in ("rule", "vlm", "face") and f.get("message")
     if not keep:
         if llm_message and f["evidence"]:
             f["message"] = llm_message

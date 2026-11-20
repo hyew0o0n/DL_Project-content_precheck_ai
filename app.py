@@ -354,7 +354,8 @@ def finding_html(f):
         parts.append(f'<div class="f-quote">{"해당 부분" if is_img else "해당 표현"} <span style="background:{HL.get(v)}">{esc(quote)}</span></div>')
         if is_img and loc.get("ocr_text") and loc.get("ocr_text") != quote:
             parts.append(f'<div class="f-quote">이미지 속 문구 · {esc(loc["ocr_text"])}</div>')
-    if f.get("message"):
+    # [final] 인물 감지는 '해당 부분 · 인물 n명' 바로 밑에 확인 질문 (설명 문장은 같은 말 반복이라 생략)
+    if f.get("message") and f.get("source") != "face":
         parts.append(f'<div class="f-msg">{esc(f["message"])}</div>')
     if f.get("review_question"):
         parts.append(f'<div class="f-q"><b>확인해주세요</b>{esc(f["review_question"])}</div>')
