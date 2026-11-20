@@ -6,8 +6,10 @@ Gemini에 이미지를 넣어 OCR·얼굴 검출로 못 잡는 두 가지를 찾
 
 판정은 항상 "검토 필요" (VLM은 없는 걸 있다고 할 수 있음 → 사람이 확인).
 위치(bbox)는 VLM이 부정확할 수 있어서 이미지 전체(None)로 둔다.
-정책 근거는 연결하지 않음 (11/16 결정): evidence=[], "~가 감지됐어요. 유의해주세요" 안내만.
-→ pipeline.run_image가 VLM finding은 explain_findings(RAG·LLM)에 넘기지 않음.
+정책 근거
+    - historical_symbol: 근거 행이 없어 안내만 (evidence=[], 11/16 결정)
+    - ip: [W8] 상표법·저작권법·플랫폼 정책 조항을 RAG로 연결 (pipeline.run_image가 explain_findings에 넘김).
+          판정은 근거가 붙어도 항상 "검토 필요" (llm/explain.py에서 고정)
 
 사용법
     from vlm.check_image import check_image
@@ -45,8 +47,8 @@ TYPE_INFO = {
     ),
     "ip": (
         "rights", "ip", "타사 로고·캐릭터",
-        "다른 회사의 로고나 캐릭터로 보이는 요소가 감지됐어요 ({desc}). 게시 전에 유의해 주세요. 검토가 필요해요.",
-        "사용 권한(라이선스·협찬 계약)이 있는지 확인해주세요.",
+        "다른 회사의 로고나 캐릭터로 보이는 요소가 감지됐어요 ({desc}). 허락 없이 쓰면 상표권·저작권 문제가 될 수 있어요.",
+        "브랜드·권리자의 사용 허락(라이선스·협찬 계약)을 받았나요?",
     ),
 }
 
@@ -141,7 +143,7 @@ def to_findings(raw: dict | None, min_conf: float = MIN_CONF) -> list[dict]:
                 "bbox": None,                       # 이미지 전체 (VLM 위치는 부정확)
                 "description": desc,
             },
-            "evidence": [],                         # 정책 근거 연결 안 함
+            "evidence": [],                         # ip는 pipeline에서 근거 연결, 상징은 안내만
             "explain_status": "vlm_notice_only",
             "message": message.format(desc=desc),
             "review_question": question,

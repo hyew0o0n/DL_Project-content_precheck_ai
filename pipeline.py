@@ -136,10 +136,12 @@ def run_pipeline(text: str, purpose: str = "none", input_id: str | None = None,
     findings = _normalize_findings(findings)
 
     # 4. 광고성 여부를 반영해 RAG 근거 검색 + LLM 설명을 붙인다.
+    ref_date, special_day = _date_info(post_date)   # [W7] / [W8] 근거 검색에도 같은 기준 날짜 사용
     findings = explain_findings(
         text,
         findings,
         ad_detected=ad["ad_signal"]["detected"],
+        ref_date=ref_date,
     )
 
     # 5. 최종 출력에는 내부 디버그용 rule_id를 제거한다.
@@ -153,8 +155,6 @@ def run_pipeline(text: str, purpose: str = "none", input_id: str | None = None,
         (int(f.get("risk", 0)) for f in findings),
         default=0,
     )
-
-    ref_date, special_day = _date_info(post_date)   # [W7]
 
     return {
         "schema_version": SCHEMA_VERSION,                         # [추가]
@@ -309,23 +309,27 @@ def run_image(image_path: str, purpose: str = "none", input_id: str | None = Non
     is_ad = purpose == "ad" or ad["ad_signal"]["detected"]
     face_findings = [_face_finding(faces)] if faces and (FACE_NOTICE == "always" or is_ad) else []
 
-    # 3. VLM → 상징·로고 (정책 근거 연결 없이 안내만, 11/16 결정)
+    # 3. VLM → 상징·로고
     vlm_findings, vlm_status = _step(check_image, "VLM", image_path, default=[])
 
-    # 4. 합치기 → 공통 필드 → 근거·설명. VLM finding은 RAG·LLM 설명을 건너뛰고 미리 정한 안내 문구 그대로
+    # 4. 합치기 → 공통 필드 → 근거·설명
+    #    [W8] 로고·캐릭터(ip)는 상표·저작권 조항을 RAG로 연결 (판정은 항상 검토 필요, 문구는 VLM 것 유지)
+    #    민감 상징(historical_symbol)은 근거 행이 없어 지금처럼 안내만
     findings = _normalize_findings(text_findings + face_findings + vlm_findings)
+    ref_date, special_day = _date_info(post_date)
+    needs_evidence = lambda f: f.get("source") != "vlm" or f.get("subtype") == "ip"
     explained = explain_findings(
         full_text or "(이미지 속 글자 없음)",
-        [f for f in findings if f.get("source") != "vlm"],
+        [f for f in findings if needs_evidence(f)],
         ad_detected=ad["ad_signal"]["detected"],
+        ref_date=ref_date,
     )
-    findings = explained + [f for f in findings if f.get("source") == "vlm"]   # 순서 유지 (VLM이 맨 뒤)
+    findings = explained + [f for f in findings if not needs_evidence(f)]   # 안내만 하는 VLM은 맨 뒤
     for f in findings:
         f.pop("rule_id", None)
         f.pop("search_types", None)
 
     verdict = _overall_verdict(findings)
-    ref_date, special_day = _date_info(post_date)
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -356,14 +360,17 @@ def run_image(image_path: str, purpose: str = "none", input_id: str | None = Non
 
 def run_file(path: str, purpose: str = "none", input_id: str | None = None,
              post_date: str | None = None) -> dict:
-    """확장자로 형식 판별 → 텍스트 / 이미지 분기 (영상은 W8)."""
+    """확장자로 형식 판별 → 텍스트 / 이미지 / 영상 분기."""
     kind = media_type_of(path)
     if kind == "image":
         return run_image(path, purpose, input_id, post_date)
     if kind == "text":
         text = Path(path).read_text(encoding="utf-8", errors="ignore")
         return run_pipeline(text, purpose, input_id, post_date)
-    raise NotImplementedError("영상 검수는 W8에 연결돼요.")
+    if kind == "video":   # [W8] B의 영상 검수 (1fps 프레임 → 이미지 검수 재사용 → 시간 구간 병합)
+        from video.run_video import run_video
+        return run_video(path, purpose=purpose, input_id=input_id, post_date=post_date)
+    raise ValueError(f"지원하지 않는 형식이에요: {kind}")
 
 
 # app.py 등에서 analyze()라는 이름을 써도 같은 함수가 동작하도록 제공

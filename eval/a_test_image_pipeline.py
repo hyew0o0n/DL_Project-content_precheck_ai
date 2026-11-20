@@ -69,7 +69,7 @@ def check(res):
             assert loc["ocr_text"][s:e] == "010-1234-5678"
         if f["source"] == "vlm":
             assert loc["bbox"] is None and f["verdict"] == "검토 필요"
-            assert f["evidence"] == [] and f["explain_status"] == "vlm_notice_only"   # 근거 연결 안 함
+            assert f["evidence"] == [] and f["explain_status"] == "vlm_notice_only"   # 상징은 근거 연결 안 함 (ip는 W8부터 연결)
             assert "감지됐어요" in f["message"]
         if f["source"] == "face":
             assert loc["bboxes"] == [FAKE_FACES[0]["bbox"]]

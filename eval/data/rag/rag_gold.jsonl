@@ -1,0 +1,25 @@
+{"id": "Q01", "question": "AI를 이용한 서비스인데 이용 전에 인공지능을 사용한다는 사실을 사용자에게 알리지 않았다.", "gold": ["AI-LAW-31-1"], "added": "W5"}
+{"id": "Q02", "question": "AI로 생성한 이미지와 글을 게시하면서 인공지능이 생성한 결과물이라는 표시를 하지 않았다.", "gold": ["AI-LAW-31-2"], "added": "W5"}
+{"id": "Q03", "question": "실제 사람처럼 보이는 AI 가상인물이 등장하는 콘텐츠인데 가상 인물이라는 사실을 명확하게 고지하지 않았다.", "gold": ["AI-LAW-31-3"], "added": "W5"}
+{"id": "Q04", "question": "AI 생성 결과물의 고지나 표시 의무에서 제외되는 예외와 구체적인 기준을 확인하고 싶다.", "gold": ["AI-LAW-31-4"], "added": "W5"}
+{"id": "Q05", "question": "건강식품을 광고하면서 이 제품을 먹으면 질병이 완치된다고 홍보했다.", "gold": ["KFTC-FOOD-08-1"], "added": "W5"}
+{"id": "Q06", "question": "AI로 만든 가상인물이 제품을 추천하는 광고에 등장했다. 가상인물 광고 표시 기준을 확인하고 싶다.", "gold": ["KFTC-ENDORSE-05-1"], "added": "W5"}
+{"id": "Q07", "question": "제품을 무료로 제공받아 후기를 작성했지만 광고나 협찬이라는 표시를 하지 않았다.", "gold": ["KFTC-ENDORSE-06-1"], "added": "W5"}
+{"id": "Q08", "question": "상품 광고에 아무 근거 없이 100% 효과, 무조건 성공 같은 과장된 표현을 사용했다.", "gold": ["KFTC-ADACT-03-1"], "added": "W5"}
+{"id": "Q09", "question": "선거운동을 위해 후보자의 얼굴과 음성을 합성한 딥페이크 영상을 제작해 게시했다.", "gold": ["ELECTION-82-8"], "added": "W5"}
+{"id": "Q10", "question": "정보통신망을 통해 불법 정보나 타인을 비방하는 내용을 온라인에 유통하는 경우의 금지 기준을 확인하고 싶다.", "gold": ["NISA-44-7"], "added": "W5"}
+{"id": "Q11", "question": "온라인 게시물에서 특정 집단을 차별하거나 비하하는 표현을 사용했다. 정보통신 심의 기준을 확인하고 싶다.", "gold": ["KCC-COMM-08"], "added": "W5"}
+{"id": "Q12", "question": "Meta 광고에 특정 집단을 차별하고 혐오하는 표현이 포함되어 있다.", "gold": ["META-ADS-01"], "added": "W5"}
+{"id": "Q13", "question": "Google Ads 광고에 신뢰하기 어려운 과장 표현과 부적절한 콘텐츠가 포함되어 있다.", "gold": ["GOOG-ADS-01"], "added": "W5"}
+{"id": "Q14", "question": "YouTube 영상에 혐오 표현과 정치적으로 민감한 표현이 포함되어 있다. 커뮤니티 가이드라인을 확인하고 싶다.", "gold": ["YT-CG-01"], "added": "W5"}
+{"id": "Q15", "question": "광고에서 국내 최초, 100% 효과라고 단정했지만 이를 입증할 실증 자료가 없다.", "gold": ["KFTC-SUBST-01"], "added": "W5"}
+{"id": "Q16", "question": "게시물에 다른 사람의 전화번호, 주민등록번호와 계좌번호를 동의 없이 공개했다.", "gold": ["PIPA-15-1"], "added": "W5"}
+{"id": "Q17", "question": "다른 회사의 로고, 상표와 캐릭터를 허락 없이 콘텐츠와 광고에 사용했다.", "gold": ["TM-LAW-108", "COPYRIGHT-136-1", "UCPA-02-1-GA"], "added": "W5", "note": "W8: IP-LAW-01을 10행으로 분리 → 새 doc_id 중 하나면 정답"}
+{"id": "Q18", "question": "다른 사람의 얼굴 사진을 동의 없이 광고에 사용하고 합성했다.", "gold": ["PORTRAIT-CASE-01", "CIVIL-750", "UCPA-02-1-TA"], "added": "W5", "note": "W8: PORTRAIT-GUIDE-01 분리 → 새 doc_id 중 하나면 정답"}
+{"id": "Q19", "question": "업체에서 원고료를 받고 제품을 추천했지만 경제적 이해관계나 광고 사실을 표시하지 않았다.", "gold": ["KFTC-ENDORSE-06-1"], "added": "W5"}
+{"id": "Q20", "question": "SNS 게시물에 다른 사람의 휴대전화 번호와 이메일 주소를 그대로 노출했다.", "gold": ["PIPA-15-1"], "added": "W5"}
+{"id": "Q21", "question": "광고 영상에 유명 스포츠 브랜드 로고를 허락 없이 크게 넣어 우리 제품처럼 보이게 했다.", "gold": ["TM-LAW-108", "UCPA-02-1-GA"], "added": "W8"}
+{"id": "Q22", "question": "인기 애니메이션 캐릭터 그림을 그대로 가져와 굿즈 홍보 이미지에 사용했다.", "gold": ["COPYRIGHT-136-1"], "added": "W8"}
+{"id": "Q23", "question": "유튜브 영상 썸네일에 다른 회사 상표를 넣어 그 회사와 관련 있는 것처럼 보이게 했다.", "gold": ["YT-TM-01", "TM-LAW-108"], "added": "W8"}
+{"id": "Q24", "question": "연예인 사진을 허락 없이 제품 광고에 넣어 그 연예인이 추천하는 것처럼 보이게 했다.", "gold": ["UCPA-02-1-TA", "PORTRAIT-CASE-01"], "added": "W8"}
+{"id": "Q25", "question": "길에서 찍힌 일반인 얼굴이 알아볼 수 있게 나온 사진을 동의 없이 SNS 홍보 게시물에 올렸다.", "gold": ["PORTRAIT-CASE-01", "CIVIL-750"], "added": "W8"}

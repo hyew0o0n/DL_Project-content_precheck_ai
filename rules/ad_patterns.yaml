@@ -30,6 +30,8 @@ disclosure:
     regex: '(쿠팡\s*)?파트너스\s*활동|제휴\s*마케팅|수수료를\s*(제공\s*)?받'
   - id: ad_start
     regex: '^\s*광고\s*[)\]:|]'
+  - id: ad_alone   # [W8] 이미지 구석 배지처럼 한 줄에 '광고'·'협찬'·'AD'만 있는 경우 (OCR은 상자마다 줄바꿈)
+    regex: '^\s*(광고|유료\s*광고|협찬|AD|PR)\s*$'
   - id: incl_ad
     regex: '광고\s*(포함|입니다|글입니다|게시물)'
   - id: en_sponsored

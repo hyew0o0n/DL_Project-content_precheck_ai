@@ -42,7 +42,7 @@ BACKOFF_SEC = 5             # 429 첫 대기 시간 → 5, 10, 20초
 CALL_GAP_SEC = 1.0          # 여러 finding을 연속 호출할 때 사이 대기 (무료 등급 분당 제한)
 
 NOT_IN_FORCE = {"예정", "행정예고"}
-NO_EVIDENCE_MESSAGE = "관련 정책 조항을 찾지 못했어요. 표현이 적절한지 직접 확인해주세요."
+NO_EVIDENCE_MESSAGE = "표현이 적절한지 직접 확인해주세요."   # [W8] '조항을 찾지 못했어요'는 언급하지 않음
 FALLBACK_MESSAGE = "{label}(으)로 보이는 표현이 있어요. 아래 근거 조항을 참고해 확인해주세요."
 GENERIC_REVIEW_QUESTION ="이 표현이 문제가 될 수 있는지 직접 확인해주세요."
 
@@ -79,7 +79,7 @@ def _query_of(finding: dict) -> str:
     return f"{finding['label']}: {snippet}"[:300]
 
 
-def retrieve(finding: dict, ad_detected: bool = False, k: int = K) -> list[dict]:
+def retrieve(finding: dict, ad_detected: bool = False, k: int = K, ref_date=None) -> list[dict]:
     """광고성 여부와 finding 종류에 따라 정책 검색 범위를 결정한다.
 
     - 광고성 감지: 광고·홍보 + 전체 정책
@@ -98,6 +98,7 @@ def retrieve(finding: dict, ad_detected: bool = False, k: int = K) -> list[dict]
         k=k,
         violation_types=finding.get("search_types") or [finding["subtype"]],   # [W7] 얼굴: ai_virtual_human + portrait
         purpose=p,
+        ref_date=ref_date,   # [W8] 게시 예정일 기준으로 '예정' → '시행' 판정
     )
 
 # ───────────── 2. 프롬프트 ─────────────
@@ -201,10 +202,10 @@ def _apply_verdict_rules(f: dict) -> dict:
 
 
 # ───────────── 5. 한 항목 / 여러 항목 ─────────────
-def explain_finding(text: str, finding: dict, ad_detected: bool = False) -> dict:
+def explain_finding(text: str, finding: dict, ad_detected: bool = False, ref_date=None) -> dict:
     """finding 하나의 evidence·message를 채운 새 dict를 돌려줌 (원본은 그대로)."""
     f = json.loads(json.dumps(finding))  # 깊은 복사
-    cands = retrieve(f, ad_detected=ad_detected)
+    cands = retrieve(f, ad_detected=ad_detected, ref_date=ref_date)
     by_id = {c["doc_id"]: c for c in cands}
 
     out = call_llm(build_prompt(text, f, cands)) if cands else None
@@ -226,24 +227,30 @@ def explain_finding(text: str, finding: dict, ad_detected: bool = False) -> dict
         llm_message = ""
         f["explain_status"] = "no_candidates"
 
-    keep = KEEP_RULE_MESSAGE and f.get("source") == "rule" and f.get("message")
+    # 규칙·VLM은 미리 정한 문장 유지 (VLM ip는 [W8]부터 근거 조항만 LLM이 고름)
+    keep = KEEP_RULE_MESSAGE and f.get("source") in ("rule", "vlm") and f.get("message")
     if not keep:
         if llm_message and f["evidence"]:
             f["message"] = llm_message
-        elif llm_message:  # 조항은 없지만 표현 자체 설명은 있음
-            f["message"] = f"{llm_message} ({NO_EVIDENCE_MESSAGE})"
+        elif llm_message:  # 조항은 없지만 표현 자체 설명은 있음 → 그 설명만 ([W8] 조항 못 찾음은 언급 X)
+            f["message"] = llm_message
         elif not f.get("message"):
             f["message"] = (FALLBACK_MESSAGE.format(label=f["label"]) if f["evidence"]
                             else NO_EVIDENCE_MESSAGE)
 
-    return _apply_verdict_rules(f)
+    f = _apply_verdict_rules(f)
+    if f.get("source") == "vlm":   # [W8] VLM(로고·캐릭터)은 근거가 붙어도 항상 검토 필요 (위반으로 올리지 않음)
+        f["verdict"] = "검토 필요"
+        f["risk"] = _risk("검토 필요", f["confidence"])
+    return f
 
 
-def explain_findings(text: str, findings: list[dict], ad_detected: bool = False) -> list[dict]:
-    """여러 finding을 차례로 처리. 무료 등급 분당 제한 때문에 호출 사이에 잠깐 쉼."""
+def explain_findings(text: str, findings: list[dict], ad_detected: bool = False, ref_date=None) -> list[dict]:
+    """여러 finding을 차례로 처리. 무료 등급 분당 제한 때문에 호출 사이에 잠깐 쉼.
+    ref_date: 게시 예정일('YYYY-MM-DD' 또는 date). None이면 오늘 기준."""
     result = []
     for i, f in enumerate(findings):
         if i > 0:
             time.sleep(CALL_GAP_SEC)
-        result.append(explain_finding(text, f, ad_detected=ad_detected))
+        result.append(explain_finding(text, f, ad_detected=ad_detected, ref_date=ref_date))
     return result
