@@ -402,6 +402,7 @@ def build_frame_result(
 def check_frame_text(
     text: str,
     purpose: str = "none",
+    ref_date: str | None = None,
 ) -> list[dict]:
     """기존 개인정보·분류기·광고 규칙·설명 기능을 사용한다."""
     import pipeline
@@ -428,6 +429,7 @@ def check_frame_text(
         text,
         findings,
         ad_detected=ad["ad_signal"]["detected"],
+        ref_date=ref_date,   # [W8] 게시 예정일 기준으로 근거 조항 시행 상태 판단
     )
 
     for finding in explained:
@@ -435,6 +437,61 @@ def check_frame_text(
         finding.pop("search_types", None)
 
     return explained
+
+
+def explain_merged_notices(
+    findings: list[dict],
+    staged: list[dict],
+    ad_detected: bool = False,
+    ref_date: str | None = None,
+) -> list[dict]:
+    """[W8] 병합된 인물(face)·로고(vlm ip) finding에 정책 근거를 붙인다.
+
+    텍스트 finding은 프레임마다 이미 근거가 붙어 있으므로 건너뛴다.
+    민감 상징(historical_symbol)은 근거 행이 없어 안내만 유지한다.
+    """
+    import pipeline
+
+    def needs(f):
+        return not f.get("evidence") and (
+            f.get("source") == "face"
+            or (f.get("source") == "vlm" and f.get("subtype") == "ip")
+        )
+
+    targets = [i for i, f in enumerate(findings) if needs(f)]
+    if not targets:
+        return findings
+
+    to_explain = []
+    for i in targets:
+        f = deepcopy(findings[i])
+        if f.get("source") == "face":
+            f["search_types"] = ["ai_virtual_human", "portrait"]
+        to_explain.append(f)
+
+    context = "\n".join(
+        dict.fromkeys(
+            (b.get("text") or "").strip()
+            for item in staged
+            for b in item.get("ocr", [])
+            if (b.get("text") or "").strip()
+        )
+    ) or "(영상 속 글자 없음)"
+
+    explained = pipeline.explain_findings(
+        context,
+        to_explain,
+        ad_detected=ad_detected,
+        ref_date=ref_date,
+    )
+
+    result = list(findings)
+    for i, f in zip(targets, explained):
+        f.pop("rule_id", None)
+        f.pop("search_types", None)
+        f["location"] = findings[i]["location"]   # 시간 구간·장면 경로 유지
+        result[i] = f
+    return result
 
 
 def _collect_ad_signal(
@@ -511,10 +568,16 @@ def _run_video_staged(
         from vision.ocr import run_ocr
         ocr_fn = run_ocr
 
+    # [W8] 게시 예정일 → 근거 검색 기준 날짜 (텍스트·인물·로고 근거 모두 같은 날짜)
+    ref_date, special_day = pipeline._date_info(
+        post_date
+    )
+
     if text_fn is None:
         text_fn = lambda text: check_frame_text(
             text,
             purpose=purpose,
+            ref_date=ref_date,
         )
 
     if face_fn is None:
@@ -569,6 +632,14 @@ def _run_video_staged(
             duration,
         )
 
+        # 4-1. [W8] 인물·로고(ip) 근거 연결: 병합 후 구간마다 1번만 호출 (이미지 검수와 같은 근거)
+        findings = explain_merged_notices(
+            findings,
+            staged,
+            ad_detected=_collect_ad_signal(frame_results)["detected"],
+            ref_date=ref_date,
+        )
+
         ocr_results = [
             {
                 "t": item["t"],
@@ -588,10 +659,6 @@ def _run_video_staged(
     # 6. 영상 전체 결과 계산
     for i, finding in enumerate(findings, 1):
         finding["id"] = f"f{i}"
-
-    ref_date, special_day = pipeline._date_info(
-        post_date
-    )
 
     verdict = pipeline._overall_verdict(
         findings
