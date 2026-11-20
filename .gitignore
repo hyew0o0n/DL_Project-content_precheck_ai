@@ -1,8 +1,31 @@
+# 비밀 키 (.env.example만 올림)
 .env
+.env.*
+!.env.example
+
+# 파이썬 환경·캐시
 .venv/
 __pycache__/
 .ipynb_checkpoints/
+
+# 모델 가중치
 checkpoints/
 *.safetensors
 *.bin
 *.pt
+
+# 영상·압축 파일 (Pexels 원본 재배포 방지 + 용량)
+data/video_bg/
+eval/data/video_eval/videos/
+*.mp4
+*.mov
+*.zip
+
+# 디버그 이미지·로그
+eval/data/video_eval/debug_*/
+*.log
+!results/*.log
+
+# 기타
+.DS_Store
+.vscode/

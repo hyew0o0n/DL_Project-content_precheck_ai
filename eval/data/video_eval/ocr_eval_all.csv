@@ -1,0 +1,21 @@
+﻿id,label,issue_type,t,caption_expected_at_sample,caption_exact_in_ocr,caption_similarity_diagnostic,caption,ocr_text,ocr_box_count
+V01,issue,pii_phone,2,True,True,1.0,문의 010-1234-5678,문의 | 010-1234-5678,2
+V02,issue,verbal_abuse,4,False,False,0.0,"야, 멍청아. 당장 꺼져.",METROPOLIS,1
+V02,issue,verbal_abuse,5,False,False,0.0,"야, 멍청아. 당장 꺼져.",METROPOLIS,1
+V03,issue,unverified_ad_claim,2,True,False,0.857,먹기만 하면 100% 살이 빠집니다,먹기만 | 살이 | 하면 | 100% | 빠집니다,5
+V04,issue,pii_phone,5,True,False,0.875,개인 연락처 010-9876-5432,연락처 | 개인 | 010-9876-5432,3
+V05,issue,verbal_abuse,1,True,False,0.889,정말 멍청하고 한심해,정말 | 멍청하고 | 한십해 | 783109 | 7856 NJD,5
+V05,issue,verbal_abuse,2,True,False,0.889,정말 멍청하고 한심해,Barcelo.com | 정말 | 멍청하고 | 한십해 | 7856 NJD,5
+V06,issue,pii_phone,6,True,False,0.824,담당자 연락처 010-4567-8901,Barcelo.com | 연락처 | 답당자 | 010-4567-8901 | 7856NJD,5
+V06,issue,pii_phone,7,True,False,0.824,담당자 연락처 010-4567-8901,Barcelo.com | 연락처 | 답당자 | 010-4567-8901 | 7856NJD,5
+V07,issue,unverified_ad_claim,2,True,False,0.0,이 상품으로 무조건 100% 수익 보장,,0
+V07,issue,unverified_ad_claim,3,True,False,0.667,이 상품으로 무조건 100% 수익 보장,무조건100% | 이상품으도 | 수익 | 보장,4
+V07,issue,unverified_ad_claim,4,True,False,0.69,이 상품으로 무조건 100% 수익 보장,무조건100% | 상푼으로 | 수익 | 보장,4
+V08,issue,unverified_medical_claim,6,True,False,0.933,이 약만 먹으면 모든 병이 완치됩니다,병이 | 약만 | 먹으면 | 모든 | 이 | 완치됩니다,6
+V08,issue,unverified_medical_claim,7,True,False,0.933,이 약만 먹으면 모든 병이 완치됩니다,병이 | 약만 | 먹으면 | 모든 | 이 | 완치됩니다,6
+V08,issue,unverified_medical_claim,8,True,False,0.867,이 약만 먹으면 모든 병이 완치됩니다,약만 | 병이 | 먹으면 | 모든 | 이 | 완치됩니다,6
+V09,normal,,3,True,False,0.727,오늘의 풍경을 기록합니다,풍경을 | 기록합니다 | 오늘의,3
+V09,normal,,4,True,False,0.727,오늘의 풍경을 기록합니다,풍경을 | 기록합니다 | 오늘의,3
+V10,normal,,5,True,False,0.8,맛있는 점심을 먹었어요,METROPOLIS | HEEI | 맛있는 | 전신을 | 먹었어요,5
+V10,normal,,6,True,False,0.778,맛있는 점심을 먹었어요,METROPOLIS | 전신을 | 맛있는 | 먹었어요,4
+V10,normal,,7,True,False,0.571,맛있는 점심을 먹었어요,METROPOLIS | H | 전신을 | 먹었어요 | 맛있는,5

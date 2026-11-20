@@ -1,0 +1,5 @@
+﻿id,label,issue_type,t,caption_expected_at_sample,caption_exact_in_ocr,caption_similarity_diagnostic,caption,ocr_text,ocr_box_count
+V01,issue,pii_phone,2,True,True,1.0,문의 010-1234-5678,문의 | 010-1234-5678,2
+V02,issue,verbal_abuse,4,False,False,0.0,"야, 멍청아. 당장 꺼져.",METROPOLIS,1
+V02,issue,verbal_abuse,5,False,False,0.0,"야, 멍청아. 당장 꺼져.",METROPOLIS,1
+V04,issue,pii_phone,5,True,False,0.875,개인 연락처 010-9876-5432,연락처 | 개인 | 010-9876-5432,3

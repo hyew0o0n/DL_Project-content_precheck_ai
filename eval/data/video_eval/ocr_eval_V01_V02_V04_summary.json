@@ -1,0 +1,11 @@
+{
+  "video_count": 3,
+  "evaluated_frames": 4,
+  "expected_caption_frames": 2,
+  "exact_caption_matches": 1,
+  "exact_match_recall": 0.5,
+  "unexpected_caption_matches_on_noncaption_frames": 0,
+  "mode": "caption_window_only",
+  "note": "Exact string match is strict; similarity is diagnostic only. Not a policy classification accuracy metric.",
+  "csv_path": "/home/team17/project/eval/data/video_eval/ocr_eval_V01_V02_V04.csv"
+}

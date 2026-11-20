@@ -1,0 +1,82 @@
+{
+  "evaluation_scope": "OCR caption frames only",
+  "total_videos": 10,
+  "issue_videos": 8,
+  "normal_videos": 2,
+  "issue_warning_detected": 7,
+  "sampling_misses": 1,
+  "correct_normal": 2,
+  "false_alarms": 0,
+  "videos": [
+    {
+      "id": "V01",
+      "label": "issue",
+      "evaluated_caption_frames": 1,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V02",
+      "label": "issue",
+      "evaluated_caption_frames": 0,
+      "warning_detected": false,
+      "status": "sampling_miss"
+    },
+    {
+      "id": "V03",
+      "label": "issue",
+      "evaluated_caption_frames": 1,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V04",
+      "label": "issue",
+      "evaluated_caption_frames": 1,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V05",
+      "label": "issue",
+      "evaluated_caption_frames": 2,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V06",
+      "label": "issue",
+      "evaluated_caption_frames": 2,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V07",
+      "label": "issue",
+      "evaluated_caption_frames": 3,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V08",
+      "label": "issue",
+      "evaluated_caption_frames": 3,
+      "warning_detected": true,
+      "status": "detected"
+    },
+    {
+      "id": "V09",
+      "label": "normal",
+      "evaluated_caption_frames": 2,
+      "warning_detected": false,
+      "status": "correct_normal"
+    },
+    {
+      "id": "V10",
+      "label": "normal",
+      "evaluated_caption_frames": 3,
+      "warning_detected": false,
+      "status": "correct_normal"
+    }
+  ]
+}

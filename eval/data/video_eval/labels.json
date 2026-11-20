@@ -1,0 +1,202 @@
+{
+  "dataset_name": "W8_synthetic_video_eval_v1",
+  "created_date": "2026-11-18",
+  "video_duration_sec": 10.0,
+  "output_resolution": [
+    720,
+    1280
+  ],
+  "output_fps": 15,
+  "sampling_assumption": "video/frames.py FFmpeg fps=fps=1:start_time=0:round=near: sample index t represents content near t+0.5s (actual frame timing is approximate).",
+  "annotations": "synthetic test-case labels; policy/model output does not necessarily equal the manual issue label",
+  "limitations": [
+    "This is a small synthetic smoke-test dataset, not an unbiased model performance benchmark.",
+    "Pexels/video licensing and individual download URLs must be verified and recorded before distribution.",
+    "1fps sampling may miss subtitles shown for less than 1 second.",
+    "Background signs, visuals, and faces may also affect a model's predictions."
+  ],
+  "counts": {
+    "issue": 8,
+    "normal": 2
+  },
+  "items": [
+    {
+      "id": "V01",
+      "video": "videos/V01.mp4",
+      "background": "bg01.mp4",
+      "label": "issue",
+      "issue_type": "pii_phone",
+      "caption": "문의 010-1234-5678",
+      "caption_start_sec": 2.25,
+      "caption_end_sec": 2.75,
+      "caption_duration_sec": 0.5,
+      "ideal_1fps_sample_times_sec": [
+        2
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/scenic-fall-drive-on-tree-lined-road-34421697/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V02",
+      "video": "videos/V02.mp4",
+      "background": "bg02.mp4",
+      "label": "issue",
+      "issue_type": "verbal_abuse",
+      "caption": "야, 멍청아. 당장 꺼져.",
+      "caption_start_sec": 4.75,
+      "caption_end_sec": 5.25,
+      "caption_duration_sec": 0.5,
+      "ideal_1fps_sample_times_sec": [],
+      "ideal_1fps_sampling_visible": false,
+      "background_source_url": "https://www.pexels.com/video/gran-via-s-iconic-metropolis-building-scene-39417079/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V03",
+      "video": "videos/V03.mp4",
+      "background": "bg03.mp4",
+      "label": "issue",
+      "issue_type": "unverified_ad_claim",
+      "caption": "먹기만 하면 100% 살이 빠집니다",
+      "caption_start_sec": 2.25,
+      "caption_end_sec": 3.25,
+      "caption_duration_sec": 1.0,
+      "ideal_1fps_sample_times_sec": [
+        2
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/close-up-video-of-food-on-a-tray-7929034/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V04",
+      "video": "videos/V04.mp4",
+      "background": "bg04.mp4",
+      "label": "issue",
+      "issue_type": "pii_phone",
+      "caption": "개인 연락처 010-9876-5432",
+      "caption_start_sec": 5.4,
+      "caption_end_sec": 6.4,
+      "caption_duration_sec": 1.0,
+      "ideal_1fps_sample_times_sec": [
+        5
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/a-person-tearing-the-bread-in-half-6420982/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V05",
+      "video": "videos/V05.mp4",
+      "background": "bg05.mp4",
+      "label": "issue",
+      "issue_type": "verbal_abuse",
+      "caption": "정말 멍청하고 한심해",
+      "caption_start_sec": 1.3,
+      "caption_end_sec": 3.3,
+      "caption_duration_sec": 2.0,
+      "ideal_1fps_sample_times_sec": [
+        1,
+        2
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/busy-urban-street-with-palm-trees-at-sunset-38374177/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V06",
+      "video": "videos/V06.mp4",
+      "background": "bg05.mp4",
+      "label": "issue",
+      "issue_type": "pii_phone",
+      "caption": "담당자 연락처 010-4567-8901",
+      "caption_start_sec": 6.4,
+      "caption_end_sec": 8.4,
+      "caption_duration_sec": 2.0,
+      "ideal_1fps_sample_times_sec": [
+        6,
+        7
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/busy-urban-street-with-palm-trees-at-sunset-38374177/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V07",
+      "video": "videos/V07.mp4",
+      "background": "bg03.mp4",
+      "label": "issue",
+      "issue_type": "unverified_ad_claim",
+      "caption": "이 상품으로 무조건 100% 수익 보장",
+      "caption_start_sec": 2.5,
+      "caption_end_sec": 5.5,
+      "caption_duration_sec": 3.0,
+      "ideal_1fps_sample_times_sec": [
+        2,
+        3,
+        4
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/close-up-video-of-food-on-a-tray-7929034/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V08",
+      "video": "videos/V08.mp4",
+      "background": "bg04.mp4",
+      "label": "issue",
+      "issue_type": "unverified_medical_claim",
+      "caption": "이 약만 먹으면 모든 병이 완치됩니다",
+      "caption_start_sec": 5.7,
+      "caption_end_sec": 8.7,
+      "caption_duration_sec": 3.0,
+      "ideal_1fps_sample_times_sec": [
+        6,
+        7,
+        8
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/a-person-tearing-the-bread-in-half-6420982/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V09",
+      "video": "videos/V09.mp4",
+      "background": "bg01.mp4",
+      "label": "normal",
+      "issue_type": null,
+      "caption": "오늘의 풍경을 기록합니다",
+      "caption_start_sec": 3.0,
+      "caption_end_sec": 5.0,
+      "caption_duration_sec": 2.0,
+      "ideal_1fps_sample_times_sec": [
+        3,
+        4
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/scenic-fall-drive-on-tree-lined-road-34421697/",
+      "background_license_verified": false
+    },
+    {
+      "id": "V10",
+      "video": "videos/V10.mp4",
+      "background": "bg02.mp4",
+      "label": "normal",
+      "issue_type": null,
+      "caption": "맛있는 점심을 먹었어요",
+      "caption_start_sec": 5.0,
+      "caption_end_sec": 8.0,
+      "caption_duration_sec": 3.0,
+      "ideal_1fps_sample_times_sec": [
+        5,
+        6,
+        7
+      ],
+      "ideal_1fps_sampling_visible": true,
+      "background_source_url": "https://www.pexels.com/video/gran-via-s-iconic-metropolis-building-scene-39417079/",
+      "background_license_verified": false
+    }
+  ],
+  "sampling_alignment_note": "Original labels assumed sample content at integer t and were corrected; V01 has sampled caption, V02 is missed at 1fps. No MP4 was modified."
+}
