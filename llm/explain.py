@@ -79,6 +79,14 @@ def _query_of(finding: dict) -> str:
     return f"{finding['label']}: {snippet}"[:300]
 
 
+# [final] 여러 유형을 따로 검색할 때 유형별 후보 수와 검색어 보강
+PER_TYPE_K = 2
+TYPE_QUERY = {
+    "portrait": "초상권: 사람의 얼굴·모습을 본인 동의 없이 촬영·공개하거나 광고에 사용",
+    "ai_virtual_human": "AI로 만든 가상인물이 추천·광고하면 가상인물임을 표시",
+}
+
+
 def retrieve(finding: dict, ad_detected: bool = False, k: int = K, ref_date=None) -> list[dict]:
     """광고성 여부와 finding 종류에 따라 정책 검색 범위를 결정한다.
 
@@ -93,13 +101,24 @@ def retrieve(finding: dict, ad_detected: bool = False, k: int = K, ref_date=None
     else:
         p = "none"
 
-    return search(
-        _query_of(finding),
-        k=k,
-        violation_types=finding.get("search_types") or [finding["subtype"]],   # [W7] 얼굴: ai_virtual_human + portrait
-        purpose=p,
-        ref_date=ref_date,   # [W8] 게시 예정일 기준으로 '예정' → '시행' 판정
-    )
+    types = finding.get("search_types") or [finding["subtype"]]   # [W7] 얼굴: ai_virtual_human + portrait
+    if len(types) == 1:
+        return search(
+            _query_of(finding),
+            k=k,
+            violation_types=types,
+            purpose=p,
+            ref_date=ref_date,   # [W8] 게시 예정일 기준으로 '예정' → '시행' 판정
+        )
+
+    # [final] 여러 유형(얼굴 = 가상인물 + 초상권)은 유형마다 따로 검색해서 합침.
+    # 한 번에 검색하면 '가상인물' 조항 점수가 높아 초상권 조항이 후보 3개 안에 못 들어갔음.
+    merged = {}
+    for t in types:
+        query = f"{TYPE_QUERY.get(t, '')} {_query_of(finding)}".strip()
+        for c in search(query, k=PER_TYPE_K, violation_types=[t], purpose=p, ref_date=ref_date):
+            merged.setdefault(c["doc_id"], {**c, "_type": t})
+    return list(merged.values())
 
 # ───────────── 2. 프롬프트 ─────────────
 PROMPT = """너는 광고·SNS 콘텐츠 사전 검수 도우미야. 사람 검수자가 빠르게 판단하도록 근거를 정리해줘.
@@ -215,6 +234,12 @@ def explain_finding(text: str, finding: dict, ad_detected: bool = False, ref_dat
         picked = list(dict.fromkeys(d for d in out["used_doc_ids"] if d in by_id))
         dropped = [d for d in out["used_doc_ids"] if d not in by_id]
         f["evidence"] = [by_id[d] for d in picked]
+        # [final] 여러 유형 finding은 유형마다 최소 1개 조항 보장 (LLM이 초상권 조항을 빼버리는 경우 방지)
+        types = {c["_type"] for c in cands if "_type" in c}
+        for t in types:
+            if not any(e.get("_type") == t for e in f["evidence"]):
+                top = next(c for c in cands if c.get("_type") == t)
+                f["evidence"].append(top)
         llm_message = out["message"].strip()
         f["explain_status"] = "ok" if not dropped else f"ok (후보 밖 doc_id 버림: {dropped})"
     elif cands:
@@ -238,6 +263,7 @@ def explain_finding(text: str, finding: dict, ad_detected: bool = False, ref_dat
             f["message"] = (FALLBACK_MESSAGE.format(label=f["label"]) if f["evidence"]
                             else NO_EVIDENCE_MESSAGE)
 
+    f["evidence"] = [{k: v for k, v in e.items() if k != "_type"} for e in f["evidence"]]   # 내부 표시 제거
     f = _apply_verdict_rules(f)
     if f.get("source") == "vlm":   # [W8] VLM(로고·캐릭터)은 근거가 붙어도 항상 검토 필요 (위반으로 올리지 않음)
         f["verdict"] = "검토 필요"

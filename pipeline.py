@@ -196,7 +196,7 @@ def _date_info(post_date: str | None) -> tuple[str, dict | None]:
 # ═══════════════════════════════════════════════════════════════
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 TEXT_EXT = {".txt"}
-VIDEO_EXT = {".mp4", ".mov"}
+# 영상(.mp4 .mov)은 최종 범위에서 제외 (11/20 결정, video-archive 브랜치에 보존)
 
 # 광고가 아닌 이미지에서 인물이 나와도 안내함 (11/16 결정)
 #   "always": 항상 안내 / "ad_only": 광고성(목적=광고 또는 광고 패턴 감지)일 때만 안내
@@ -213,8 +213,6 @@ def media_type_of(path: str) -> str:
         return "image"
     if ext in TEXT_EXT:
         return "text"
-    if ext in VIDEO_EXT:
-        return "video"
     raise ValueError(f"지원하지 않는 형식이에요: {ext}")
 
 
@@ -360,16 +358,13 @@ def run_image(image_path: str, purpose: str = "none", input_id: str | None = Non
 
 def run_file(path: str, purpose: str = "none", input_id: str | None = None,
              post_date: str | None = None) -> dict:
-    """확장자로 형식 판별 → 텍스트 / 이미지 / 영상 분기."""
+    """확장자로 형식 판별 → 텍스트 / 이미지 분기."""
     kind = media_type_of(path)
     if kind == "image":
         return run_image(path, purpose, input_id, post_date)
     if kind == "text":
         text = Path(path).read_text(encoding="utf-8", errors="ignore")
         return run_pipeline(text, purpose, input_id, post_date)
-    if kind == "video":   # [W8] B의 영상 검수 (1fps 프레임 → 이미지 검수 재사용 → 시간 구간 병합)
-        from video.run_video import run_video
-        return run_video(path, purpose=purpose, input_id=input_id, post_date=post_date)
     raise ValueError(f"지원하지 않는 형식이에요: {kind}")
 
 

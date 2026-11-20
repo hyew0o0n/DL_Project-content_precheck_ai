@@ -10,7 +10,6 @@ import base64
 import html
 import io
 import json
-import shutil
 from datetime import date
 from pathlib import Path
 
@@ -24,7 +23,6 @@ if RUN is None:
     raise ImportError("pipeline.py에서 run(text, purpose) 함수를 찾지 못했어요. app.py의 RUN을 맞춰주세요.")
 RUN_FILE = getattr(pipeline, "run_file", None)   # [W7] 이미지: fn(path, purpose, input_id, post_date) -> dict
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp"}
-VIDEO_EXT = {".mp4", ".mov"}   # [W8] 영상
 
 # ---------------------------------------------------------------
 # 디자인 토큰
@@ -154,12 +152,6 @@ footer {{ display:none !important; }}
 .img-whole {{ margin-top:12px; font-size:13px; color:var(--sub); line-height:1.6; }}
 .ocr-lines {{ margin-top:14px; font-size:13px; color:var(--sub); line-height:1.7; }}
 .ocr-body {{ white-space:pre-wrap; }}
-.v-time {{ display:inline-block; margin-left:8px; font-size:12px; font-weight:600; padding:2px 8px; border-radius:999px; background:#f0f0f0; color:var(--ink); }}
-.v-meta {{ margin-top:10px; font-size:13px; color:var(--sub); }}
-.v-bar {{ position:relative; height:22px; margin-top:12px; background:#f0f0f0; border-radius:6px; }}
-.v-seg {{ position:absolute; top:0; height:100%; border-radius:4px; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; overflow:hidden; }}
-.v-axis {{ display:flex; justify-content:space-between; font-size:11px; color:#9a9a9a; margin-top:3px; }}
-.f-frame {{ margin-top:12px; max-width:260px; }}
 .ocr-lines summary {{ cursor:pointer; color:var(--ink); font-weight:600; list-style:none; }}
 .ocr-lines summary::-webkit-details-marker {{ display:none; }}
 .ocr-lines summary::after {{ content:" ▾"; }}
@@ -184,13 +176,16 @@ footer {{ display:none !important; }}
 #loading h2 {{ font-size:26px; font-weight:700; margin:0; }}
 #loading p {{ font-size:15px; color:var(--sub); margin:8px 0 32px; }}
 #loading .steps {{ display:inline-flex; align-items:stretch; gap:16px; padding:0; margin:0; list-style:none; counter-reset:s; }}
-#loading .steps li {{ counter-increment:s; border:1.2px solid #909090; border-radius:14px; padding:16px 22px; text-align:left;
-                     font-size:15px; font-weight:600; width:220px; box-sizing:border-box; animation:pulse 2.4s ease-in-out infinite; }}
+/* [final] 세 상자 크기 같게(높이·너비 고정), 작은 설명은 한 줄로 (줄바꿈 X) */
+#loading .steps li {{ counter-increment:s; border:1.2px solid #909090; border-radius:14px; text-align:left;
+                     font-size:15px; font-weight:600; width:280px; height:86px; box-sizing:border-box; padding:20px 22px !important;
+                     white-space:nowrap; animation:pulse 2.4s ease-in-out infinite; }}
 #loading .steps li:nth-child(2) {{ animation-delay:0.8s; }}
 #loading .steps li:nth-child(3) {{ animation-delay:1.6s; }}
 #loading .steps li::before {{ content:counter(s); display:inline-block; width:22px; height:22px; line-height:22px; text-align:center;
                              border-radius:50%; background:var(--brand); font-size:12px; margin-right:8px; }}
-#loading .steps small {{ display:block; font-size:12px; font-weight:400; color:var(--sub); margin:6px 0 0 30px; }}
+#loading .steps small {{ display:block; font-size:12px; font-weight:400; color:var(--sub); margin:6px 0 0 30px;
+                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
 @keyframes pulse {{ 0%,100% {{ background:#fff; }} 30% {{ background:#fbfde8; }} }}
 """
 
@@ -216,7 +211,7 @@ LOADING = """
     <circle cx="28" cy="28" r="24" fill="none" stroke="#111" stroke-width="6" stroke-linecap="round" stroke-dasharray="38 113"/>
   </svg>
   <h2>분석 중이에요</h2>
-  <p>보통 10~20초 정도 걸려요. 영상은 1분가량 걸릴 수 있어요.</p>
+  <p>보통 10~20초 정도 걸려요.</p>
   <ol class="steps">
     <li>표현 감지 <small>개인정보 · 혐오 · 욕설 · 광고 패턴</small></li>
     <li>정책 근거 검색 <small>법령 · 공정위 지침 · 플랫폼 정책</small></li>
@@ -270,7 +265,7 @@ def _thumb_b64(path, max_w=900):
 
 
 def _boxed_image(img_path, findings, W, H):
-    """이미지 위에 finding 상자(bbox)를 그린 HTML + 상자 없는 finding 목록. 이미지·영상 프레임 공용."""
+    """이미지 위에 finding 상자(bbox)를 그린 HTML + 상자 없는 finding 목록."""
     by_box, whole = {}, []   # 같은 상자(같은 OCR 줄)에 걸린 finding은 상자 하나로 묶음 → 번호 "2·3·4"
     for f in findings:
         loc = f.get("location") or {}
@@ -303,38 +298,6 @@ def image_view(img_path, res):
     return out
 
 
-def _fmt_sec(x):
-    return f"{float(x):g}"
-
-
-def _time_label(loc):
-    t = loc.get("time")
-    return f"{_fmt_sec(t[0])}–{_fmt_sec(t[1])}초" if t and len(t) == 2 else ""
-
-
-def video_view(res):
-    """[W8] 영상: 대표 장면 + 문제 구간 타임라인(번호 = 오른쪽 카드 번호). 상자는 각 카드의 장면에 그림."""
-    inp = res.get("input", {})
-    dur = float(inp.get("duration") or 1)
-    segs = []
-    for f in res.get("findings", []):
-        t = (f.get("location") or {}).get("time")
-        if not t:
-            continue
-        left, width = 100 * t[0] / dur, max(100 * (t[1] - t[0]) / dur, 2.5)
-        segs.append(f'<div class="v-seg" title="{esc(f.get("label", ""))} · {_time_label(f["location"])}" '
-                    f'style="left:{left:.2f}%;width:{width:.2f}%;background:{COLORS.get(f["verdict"])}">'
-                    f'{esc(f.get("id", "").lstrip("f"))}</div>')
-    rep = inp.get("representative_frame")
-    out = f'<div class="img-wrap"><img src="{_thumb_b64(rep)}"></div>' if rep and Path(rep).is_file() else ""
-    meta = res.get("meta") or {}
-    out += (f'<div class="v-meta">🎬 {esc(inp.get("file_name", ""))} · {_fmt_sec(dur)}초 · '
-            f'1초에 1장씩 {meta.get("frame_count", 0)}장을 확인했어요</div>')
-    out += (f'<div class="v-bar">{"".join(segs)}</div>'
-            f'<div class="v-axis"><span>0초</span><span>{_fmt_sec(dur)}초</span></div>')
-    return out
-
-
 def left_panel(text, purpose, res, img_path=None):
     v = res.get("verdict", "통과")
     chips = "".join(f'<span class="chip{" on" if val == purpose else ""}">{esc(lbl)}</span>' for lbl, val in PURPOSES[:-1])
@@ -350,7 +313,7 @@ def left_panel(text, purpose, res, img_path=None):
     <div class="overall">{badge(v)}<span class="sum">{esc(res.get("summary", ""))}</span>
       <span class="score"><small>위험도</small><b style="color:{COLORS.get(v)}">{res.get("risk_score", 0)}</b></span></div>
     <div class="src-card">
-      {(video_view(res) if res.get("input", {}).get("media_type") == "video" else image_view(img_path, res)) if img_path else f'<div class="src-text">{highlighted(text, res.get("findings", []))}</div>'}
+      {image_view(img_path, res) if img_path else f'<div class="src-text">{highlighted(text, res.get("findings", []))}</div>'}
       <div class="legend"><span><i style="background:{HL['위반']}"></i>위반</span><span><i style="background:{HL['검토 필요']}"></i>검토 필요</span></div>
       <div class="p-title">콘텐츠 게시 목적</div>
       <div class="chips">{chips}</div>
@@ -379,23 +342,18 @@ def evidence_html(e):
     return f'<div class="ev"><div class="ev-name">{name}</div><div class="ev-box">{box}<div class="ev-meta">{"".join(meta)}</div></div></div>'
 
 
-def finding_html(f, size=None):
+def finding_html(f):
     v = f["verdict"]
     loc = f.get("location") or {}
     quote = loc.get("text") or loc.get("ocr_text") or loc.get("description")
-    is_video = loc.get("modality") == "video"   # [W8]
-    is_img = loc.get("modality") == "image" or is_video
+    is_img = loc.get("modality") == "image"
     no = f'<span class="f-no" style="background:{COLORS.get(v)}">{esc(f.get("id", "").lstrip("f"))}</span>' if is_img else ""
-    when = f'<span class="v-time">⏱ {_time_label(loc)}</span>' if is_video and loc.get("time") else ""
-    parts = [f'<div class="finding"><div class="f-top">{no}{badge(v)}<span class="f-label">{esc(f.get("label", ""))}</span>{when}'
+    parts = [f'<div class="finding"><div class="f-top">{no}{badge(v)}<span class="f-label">{esc(f.get("label", ""))}</span>'
              f'<span class="f-risk" style="color:{COLORS.get(v)}">위험도<b style="color:{COLORS.get(v)}">{f.get("risk", 0)}</b></span></div>']
     if quote:
         parts.append(f'<div class="f-quote">{"해당 부분" if is_img else "해당 표현"} <span style="background:{HL.get(v)}">{esc(quote)}</span></div>')
         if is_img and loc.get("ocr_text") and loc.get("ocr_text") != quote:
             parts.append(f'<div class="f-quote">이미지 속 문구 · {esc(loc["ocr_text"])}</div>')
-    if is_video and loc.get("frame_path") and Path(loc["frame_path"]).is_file() and size:
-        frame, _ = _boxed_image(loc["frame_path"], [f], *size)   # 문제가 처음 보인 장면 + 상자
-        parts.append(f'<div class="f-frame">{frame}</div>')
     if f.get("message"):
         parts.append(f'<div class="f-msg">{esc(f["message"])}</div>')
     if f.get("review_question"):
@@ -423,16 +381,14 @@ def right_panel(res):
     n_v = sum(f["verdict"] == "위반" for f in fs)
     n_r = sum(f["verdict"] == "검토 필요" for f in fs)
     head = f'<div class="f-head">발견 항목 <b>{len(fs)}건</b> · 위반 {n_v} · 검토 필요 {n_r}</div>'
-    inp = res.get("input", {})
-    size = (inp.get("width") or 1, inp.get("height") or 1)
-    return day_banner(res) + head + "".join(finding_html(f, size) for f in fs)
+    return day_banner(res) + head + "".join(finding_html(f) for f in fs)
 
 
 # ---------------------------------------------------------------
 # 이벤트
 # ---------------------------------------------------------------
 def on_file(file):
-    """.txt면 글자를 입력창에 채움. [W7] 이미지·[W8] 영상은 경로를 기억해 두고 파일 검수로 보냄."""
+    """.txt면 글자를 입력창에 채움. [W7] 이미지는 경로를 기억해 두고 이미지 검수로 보냄."""
     if file is None:
         return gr.update(), "", None
     p = Path(file if isinstance(file, str) else file.name)
@@ -441,8 +397,6 @@ def on_file(file):
         return p.read_text(encoding="utf-8", errors="ignore"), f'<span class="ok">📎 {esc(p.name)}</span>', None
     if ext in IMAGE_EXT and RUN_FILE is not None:
         return gr.update(), f'<span class="ok">🖼️ {esc(p.name)} · 이미지를 검수해요</span>', str(p)
-    if ext in VIDEO_EXT and RUN_FILE is not None:
-        return gr.update(), f'<span class="ok">🎬 {esc(p.name)} · 영상을 검수해요 (1분 이하)</span>', str(p)
     return gr.update(), f'📎 {esc(p.name)} · 지원하지 않는 형식이에요', None
 
 
@@ -509,24 +463,18 @@ def on_submit(text, purpose, img_path=None, post_date=None):
             res = RUN(text, purpose, post_date=post_date)
         if isinstance(res, str):
             res = json.loads(res)
-    except Exception as e:  # 분석 실패 → 업로드 화면으로 되돌림 (영상은 '통과'가 아니라 검수 미완료)
-        if img_path and Path(img_path).suffix.lower() in VIDEO_EXT:
-            gr.Warning(f"영상 검수를 끝내지 못했어요 (검수 미완료): {e}")
-        else:
-            gr.Warning(f"분석 중 오류가 났어요: {type(e).__name__}")
+    except Exception as e:  # 분석 실패 → 업로드 화면으로 되돌림
+        gr.Warning(f"분석 중 오류가 났어요: {type(e).__name__}")
         print("[app] pipeline 오류:", repr(e))
         return (gr.Column(visible=True), gr.Column(visible=False), gr.Row(visible=False),
-                gr.update(), gr.update(), gr.update())
+                gr.update(), gr.update())
     left, right = left_panel(text, purpose, res, img_path), right_panel(res)
-    preview_dir = (res.get("meta") or {}).get("preview_dir")
-    if preview_dir and Path(preview_dir).name.startswith("w8_video_preview_"):
-        shutil.rmtree(preview_dir, ignore_errors=True)   # [W8] 장면은 HTML에 넣었으니 /tmp 임시 이미지 정리
-    return (gr.Column(visible=False), gr.Column(visible=False), gr.Row(visible=True), left, right, res)
+    return (gr.Column(visible=False), gr.Column(visible=False), gr.Row(visible=True), left, right)
 
 
 def on_back():
     """다른 콘텐츠 검수: 올린 이미지도 비움."""
-    return gr.Column(visible=True), gr.Row(visible=False), None, '<span id="file-note">txt · jpg · png · mp4·mov(1분 이하)</span>'
+    return gr.Column(visible=True), gr.Row(visible=False), None, '<span id="file-note">txt · jpg · png</span>'
 
 
 # ---------------------------------------------------------------
@@ -552,9 +500,9 @@ with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
                 in_date = gr.Textbox(value=date.today().isoformat(), elem_id="in-date",
                                      elem_classes="hidden-box", show_label=False, container=False)
             with gr.Row(elem_id="card-foot", equal_height=True):
-                btn_file = gr.UploadButton("+ 파일 추가", file_types=[".txt", ".jpg", ".jpeg", ".png", ".mp4", ".mov"],
+                btn_file = gr.UploadButton("+ 파일 추가", file_types=[".txt", ".jpg", ".jpeg", ".png"],
                                            elem_id="btn-file", size="sm")
-                file_note = gr.HTML('<span id="file-note">txt · jpg · png · mp4·mov(1분 이하)</span>')
+                file_note = gr.HTML('<span id="file-note">txt · jpg · png</span>')
                 btn_go = gr.Button("→", elem_id="btn-go")
         gr.HTML(FEATURES)
 
@@ -567,8 +515,6 @@ with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
         with gr.Column(scale=5, elem_id="left"):
             out_left = gr.HTML()
             btn_back = gr.Button("← 다른 콘텐츠 검수하기", elem_id="btn-back")
-            with gr.Accordion("원본 JSON 보기", open=False):
-                out_json = gr.JSON()
         with gr.Column(scale=7):
             out_right = gr.HTML()
 
@@ -577,7 +523,7 @@ with gr.Blocks(title="beFore · 콘텐츠 사전 검수", **_blocks_kw) as demo:
     btn_file.upload(on_file, btn_file, [in_text, file_note, img_state])
     (btn_go.click(on_start, [in_text, img_state], [screen1, screen_loading], show_progress="hidden")
            .success(on_submit, [in_text, in_purpose, img_state, in_date],
-                    [screen1, screen_loading, screen2, out_left, out_right, out_json],
+                    [screen1, screen_loading, screen2, out_left, out_right],
                     show_progress="hidden"))
     btn_back.click(on_back, None, [screen1, screen2, img_state, file_note])
 

@@ -14,15 +14,13 @@ checkpoints/
 *.bin
 *.pt
 
-# 영상·압축 파일 (Pexels 원본 재배포 방지 + 용량)
+# 영상·압축 파일 (영상 기능은 final에서 제외, 용량)
 data/video_bg/
-eval/data/video_eval/videos/
 *.mp4
 *.mov
 *.zip
 
-# 디버그 이미지·로그
-eval/data/video_eval/debug_*/
+# 로그
 *.log
 !results/*.log
 
