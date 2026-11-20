@@ -9,6 +9,7 @@
 - 필수 열을 못 찾으면 실제 시트 헤더를 보여주고 멈춤 (예전엔 KeyError: 'clause')
 - 결과를 항상 rag/policy_kb.jsonl에 씀 (예전엔 실행한 폴더에 써서 프로젝트 최상위에 파일이 생겼음)
 - doc_id 빈칸·중복 검사
+- 시트 주소를 gviz/tq → export?format=csv로 변경 (자료형 추측 없이 그대로 받음)
 """
 import json
 import re
@@ -18,7 +19,9 @@ from pathlib import Path
 import pandas as pd
 
 SHEET_ID = "14CZsLuvHyw-6b-SwTY_GkbOCHEfDLPJA33NWQkhz4YQ"
-URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&gid=0"
+# export 주소 = 시트 내용 그대로. (예전 gviz/tq 주소는 구글이 열 자료형을 추측해서
+#  첫 행들을 헤더로 합치거나, 날짜 열의 '상시' 같은 글자 칸을 비워버릴 수 있음 → 11/20 KeyError: 'clause')
+URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 OUT_PATH = Path(__file__).resolve().parent / "policy_kb.jsonl"
 
 # JSON 키 → 시트 헤더 후보 (앞에서부터, 띄어쓰기·기호 무시하고 '포함'되면 일치)
@@ -66,6 +69,10 @@ def main():
     df = pd.read_csv(URL, dtype=str).fillna("")
     headers = list(df.columns)
     mapping = match_columns(headers)
+
+    if any(re.search(r"[A-Z]+-[A-Z0-9]+-?\d", h) for h in headers):   # 헤더에 doc_id 같은 값이 섞임 = 행이 헤더로 합쳐짐
+        print("❌ 시트 헤더에 데이터 행이 섞여 들어왔어요:", headers)
+        sys.exit(1)
 
     missing = [k for k in REQUIRED if k not in mapping.values()]
     if missing:
